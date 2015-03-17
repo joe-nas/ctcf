@@ -134,7 +134,7 @@ library(doMC)
 library(plyr)
 registerDoMC(cores = 2)
 #simulated_loops <- llply(1:10, function(x){
-#  rl <- randomLoop(ctcf_split$yes, 5000)
+#  rl <- randomLoop(ctcf_split$no, 5000)
 #  return(rl$gr[matchLoops(loop_props[,1:3], rl$sim_loops)])
 #}, .parallel = T)
 
