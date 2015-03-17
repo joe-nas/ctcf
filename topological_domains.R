@@ -90,7 +90,8 @@ obs_loops_gr <- with(ht_anchors_df[ht_anchors_df$loopID %in% loop_props$loopID,]
                              IRanges(start = start.x,
                                      end = end.y),
                              head_height = height.x,
-                             tail_height = height.y))
+                             tail_height = height.y,
+                             hcc = hcc.x))
 
 # generate function to generate random loops
 ctcf_split <- split(ctcf_bs_gr, ctcf_bs_gr$interaction)
@@ -155,6 +156,7 @@ load(curl(url = simulated_loops_url, open = "r"))
 # count overlaps of simulated loops as well as observed loops with topological domain barriers
 expected <- countOverlaps(GRangesList(simulated_loops), topod_mm8)
 observed <- countOverlaps(GRangesList(obs_loops_gr), topod_mm8)
+
 ## visualizing observed and expected loop-topological domain overlap
 library(lattice)
 histogram(expected, xlim = range(c(expected+20,observed-20)), 
@@ -169,4 +171,47 @@ histogram(expected, xlim = range(c(expected+20,observed-20)),
           }, 
           xlab = list(label = "Topological domain overlaps", cex = 2),
           ylab = list(cex = 2))
+
+
+## are particular loop types more likely to cross topological domain borders than others
+
+topoEnrich <- function(loops, topod, red = FALSE, alt = "greater"){
+  if(red == TRUE){
+    obs_loops_by_hcc <- reduce(split(loops, loops$hcc))
+  }else{
+    obs_loops_by_hcc <- split(loops, loops$hcc)
+  }
+  
+  observed_by_hcc <- countOverlaps(obs_loops_by_hcc, topod)
+  
+  n_tot_loops <- length(unlist(obs_loops_by_hcc))
+  n_tot_ov <- sum(observed_by_hcc)
+  
+  split_n_loops <- laply(obs_loops_by_hcc, length)
+  
+  
+  background <- cbind(n_tot_ov, n_tot_loops - n_tot_ov)
+  foreground <- t(rbind(observed_by_hcc, split_n_loops - observed_by_hcc))
+  
+  res <- laply(1:nrow(foreground), function(idx){
+    fisher.test(rbind(foreground[idx,],background), 
+                alternative = alt)$p.value
+  })
+  res
+}
+enrich <- topoEnrich(obs_loops_gr, topod_mm8, red = TRUE, alt = "greater")
+depletion <- topoEnrich(obs_loops_gr, topod_mm8, red = TRUE, alt = "less")
+
+enr_depl <- as.matrix(cbind(enrich, depletion))
+rownames(enr_depl) = c("I", "II", "III", "IV", "V")
+
+library(RColorBrewer)
+WhiteBlack <- colorRampPalette(c("white", "#1D2020","black"))
+WhiteDarkBlue <- colorRampPalette(c("white","#08306B","#1D2020"))
+DarkBlueWhite <- colorRampPalette(rev(c("white","#08306B","#1D2020")))
+BlackWhite <- colorRampPalette(c("black","#1D2020", "white"))
+BlueBlack <- colorRampPalette(c("white","#56B1F7","black"))
+mySpectral <- colorRampPalette(brewer.pal(n = 9, "Spectral"))
+levelplot(t(enr_depl),col.regions = BlueBlack(256))
+
 
