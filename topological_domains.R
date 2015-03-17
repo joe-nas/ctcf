@@ -96,6 +96,9 @@ obs_loops_gr <- with(ht_anchors_df[ht_anchors_df$loopID %in% loop_props$loopID,]
 ctcf_split <- split(ctcf_bs_gr, ctcf_bs_gr$interaction)
 
 randomLoop <- function(gr, n){
+# takes GRanges object and an integer as input
+# samples 2 times n of gr and combines them to a new gr given a number of constraints
+# returns a gr containing hypothetical loops
   n_gr <- length(gr)
   ha_idx <- sample(1: n_gr, replace = T, size = n)
   ta_idx <- sample(1: n_gr, replace = T, size = n)
@@ -116,6 +119,8 @@ randomLoop <- function(gr, n){
 }
 
 matchLoops <- function(obs_loops, sim_loops){
+# takes 2 matrices as input, calculates distances between first and the second matrix
+# returns a vector of indeces comprising indeces of the second matrix with min dist to first matrix 
   require(StatMatch)
   require(plyr)
   idx <- c()
