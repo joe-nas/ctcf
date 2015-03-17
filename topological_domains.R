@@ -83,6 +83,8 @@ loop_props <- with(ht_anchors_df[complete.cases(ht_anchors_df),], data.frame(
 
 # remove loops larger than 1MB
 loop_props <- loop_props[which(loop_props$distance <= 10^6),]
+
+# create a GRanges object from head and tail anchors which corresponds to model-loops for artificial loops generation
 obs_loops_gr <- with(ht_anchors_df[ht_anchors_df$loopID %in% loop_props$loopID,],
                      GRanges(Rle(seqnames.x),
                              IRanges(start = start.x,
