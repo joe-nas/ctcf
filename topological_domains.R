@@ -1,4 +1,3 @@
-
 ### topological domains
 library(rtracklayer)
 library(gdata)
@@ -82,7 +81,7 @@ loop_props <- with(ht_anchors_df[complete.cases(ht_anchors_df),], data.frame(
   loopID = loopID
 ))
 
-# filter loop larger than 1MB
+# remove loops larger than 1MB
 loop_props <- loop_props[which(loop_props$distance <= 10^6),]
 obs_loops_gr <- with(ht_anchors_df[ht_anchors_df$loopID %in% loop_props$loopID,],
                      GRanges(Rle(seqnames.x),
@@ -130,15 +129,37 @@ matchLoops <- function(obs_loops, sim_loops){
   return(idx)
 }
 
-library(doMC)
-library(plyr)
-registerDoMC(cores = 2)
-#simulated_loops <- llply(1:10, function(x){
-#  rl <- randomLoop(ctcf_split$no, 5000)
-#  return(rl$gr[matchLoops(loop_props[,1:3], rl$sim_loops)])
-#}, .parallel = T)
 
+# done on server
+# library(doMC)
+# library(plyr)
+# registerDoMC(cores = 6)
+# simulated_loops <- llply(1:100, function(x){
+#   rl <- randomLoop(ctcf_split$no, 5000)
+#   return(rl$gr[matchLoops(loop_props[,1:3], rl$sim_loops)])
+# }, .parallel = T)
+
+
+library(curl)
+simulated_loops_url <- 
+  "https://github.com/joe-nas/ctcf/raw/master/simulated_loops.Rdata"
+load(curl(url = simulated_loops_url, open = "r"))
+
+# count overlaps of simulated loops as well as observed loops with topological domain barriers
+expected <- countOverlaps(GRangesList(simulated_loops), topod_mm8)
+observed <- countOverlaps(GRangesList(obs_loops_gr), topod_mm8)
+## visualising observed and expected loop-topological donain overlap
 library(lattice)
-#histogram(countOverlaps(GRangesList(simulated_loops), topod_mm8))
-#countOverlaps(GRangesList(obs_loops_gr), topod_mm8)
+histogram(expected, xlim = range(c(expected+20,observed-20)), 
+          breaks = 30, scales = list(tck = c(1,0), cex = 1.5), 
+          auto.key=list(text=c("Observed", "Expected"), cex = 2,
+                        columns = 2, lines = F, rectangles = T),
+          par.settings = simpleTheme(col = c("red", "#08306B"), 
+                                     border = "transparent"),
+          panel = function(x,y, ...){
+            panel.histogram(x, ..., col = "#08306B")
+            panel.abline(v = observed, col = "red" , lwd = 4)
+          }, 
+          xlab = list(label = "Topological domain overlaps", cex = 2),
+          ylab = list(cex = 2))
 
