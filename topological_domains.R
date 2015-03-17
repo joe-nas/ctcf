@@ -148,7 +148,7 @@ load(curl(url = simulated_loops_url, open = "r"))
 # count overlaps of simulated loops as well as observed loops with topological domain barriers
 expected <- countOverlaps(GRangesList(simulated_loops), topod_mm8)
 observed <- countOverlaps(GRangesList(obs_loops_gr), topod_mm8)
-## visualising observed and expected loop-topological donain overlap
+## visualizing observed and expected loop-topological domain overlap
 library(lattice)
 histogram(expected, xlim = range(c(expected+20,observed-20)), 
           breaks = 30, scales = list(tck = c(1,0), cex = 1.5), 
