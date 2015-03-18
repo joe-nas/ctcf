@@ -1,6 +1,7 @@
 ### topological domains
 library(rtracklayer)
 library(gdata)
+library(curl)
 # load topological domain data
 topological_domains <- "http://www.nature.com/nature/journal/v485/n7398/extref/nature11082-s2.xls"
 
@@ -159,23 +160,27 @@ observed <- countOverlaps(GRangesList(obs_loops_gr), topod_mm8)
 
 ## visualizing observed and expected loop-topological domain overlap
 library(lattice)
+lattice.options(axis.padding=list(factor=0.5))
+
 histogram(expected, xlim = range(c(expected+20,observed-20)), 
-          breaks = 30, scales = list(tck = c(1,0), cex = 1.5), 
-          auto.key=list(text=c("Observed", "Expected"), cex = 2,
-                        columns = 2, lines = F, rectangles = T),
+          breaks = 30, scales = list(tck = c(1,0), cex = 2), 
+          auto.key=list(text=c("Observed", "Expected"), cex = 2.25,
+                        columns = 1, lines = F, rectangles = T, 
+                        corner = c(0, 1)),
           par.settings = simpleTheme(col = c("red", "#08306B"), 
                                      border = "transparent"),
           panel = function(x,y, ...){
             panel.histogram(x, ..., col = "#08306B")
-            panel.abline(v = observed, col = "red" , lwd = 4)
+            panel.abline(v = observed, col = "red" , lwd = 5)
           }, 
-          xlab = list(label = "Topological domain overlaps", cex = 2),
-          ylab = list(cex = 2))
+          xlab = list(label = "Topological domain overlaps", cex = 3),
+          ylab = list(cex = 3))
 
 
 ## are particular loop types more likely to cross topological domain borders than others
 
 topoEnrich <- function(loops, topod, red = FALSE, alt = "greater"){
+  require(plyr)
   if(red == TRUE){
     obs_loops_by_hcc <- reduce(split(loops, loops$hcc))
   }else{
@@ -193,25 +198,46 @@ topoEnrich <- function(loops, topod, red = FALSE, alt = "greater"){
   background <- cbind(n_tot_ov, n_tot_loops - n_tot_ov)
   foreground <- t(rbind(observed_by_hcc, split_n_loops - observed_by_hcc))
   
-  res <- laply(1:nrow(foreground), function(idx){
+  p.val <- laply(1:nrow(foreground), function(idx){
     fisher.test(rbind(foreground[idx,],background), 
                 alternative = alt)$p.value
   })
-  res
+  list("p.val" = p.val,
+       "res.sum" = foreground)
 }
-enrich <- topoEnrich(obs_loops_gr, topod_mm8, red = TRUE, alt = "greater")
-depletion <- topoEnrich(obs_loops_gr, topod_mm8, red = TRUE, alt = "less")
+enrichment <- topoEnrich(obs_loops_gr, topod_mm8, red = FALSE, alt = "greater")
+depletion <- topoEnrich(obs_loops_gr, topod_mm8, red = FALSE, alt = "less")
 
-enr_depl <- as.matrix(cbind(enrich, depletion))
-rownames(enr_depl) = c("I", "II", "III", "IV", "V")
+# barchart showing the ctcf mediated loops class distribution 
+# in the context of topological domain barriers
+barchart(enrichment$res.sum,
+         stack = T, 
+         horizontal = F ,
+         scales = list(tck = c(1,0), cex = 2),
+         auto.key=list(text=c("cross-domain", "within-domain"), 
+                       cex = 2.25, corner = c(0,1),
+                       columns = 1, lines = F, rectangles = T),
+         par.settings = simpleTheme(col = c("red", "#08306B"), 
+                                    border = "transparent"),
+         ylab = list(label = "# Loops", cex = 3),
+         xlab = list(label = "Loop class", cex = 3))
 
-library(RColorBrewer)
-WhiteBlack <- colorRampPalette(c("white", "#1D2020","black"))
-WhiteDarkBlue <- colorRampPalette(c("white","#08306B","#1D2020"))
-DarkBlueWhite <- colorRampPalette(rev(c("white","#08306B","#1D2020")))
-BlackWhite <- colorRampPalette(c("black","#1D2020", "white"))
-BlueBlack <- colorRampPalette(c("white","#56B1F7","black"))
-mySpectral <- colorRampPalette(brewer.pal(n = 9, "Spectral"))
-levelplot(t(enr_depl),col.regions = BlueBlack(256))
+
+# normalized barchart
+enrich_norm <- 100*enrichment$res.sum[,1]/colSums(t(enrichment$res.sum))
+enrich_norm <- rbind(enrich_norm, 100- enrich_norm)
+
+barchart(t(enrich_norm),
+         stack = T, outer = F,
+         horizontal = F ,
+         scales = list(tck = c(1,0), cex = 2),
+         auto.key=list(text=c("cross-domain", "within-domain"), 
+                       cex = 2.25, space = "top",
+                       columns = 1, lines = F, rectangles = T),
+         par.settings = simpleTheme(col = c("red", "#08306B"),
+                                    fill = c("red", "#08306B"),
+                                    border = "transparent"),
+         ylab = list(label = "% Loops", cex = 3),
+         xlab = list(label = "Loop class", cex = 3))
 
 
