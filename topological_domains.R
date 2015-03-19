@@ -241,9 +241,9 @@ barchart(t(enrich_norm),
          xlab = list(label = "Loop class", cex = 3), just = "top")
 
 
-source(curl(url = simulated_loops_url, open = "r"))
+library(devtools)
+source_url("https://github.com/joe-nas/ctcf/raw/master/utility_functions.R")
 grShuffle(topod_mm8, genome_info = getGenomeTable(), method = "genome")
-
 
 library(doMC)
 registerDoMC(2)
