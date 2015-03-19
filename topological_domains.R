@@ -166,7 +166,7 @@ histogram(expected, xlim = range(c(expected+20,observed-20)),
           breaks = 30, scales = list(tck = c(1,0), cex = 2), 
           auto.key=list(text=c("Observed", "Expected"), cex = 2.25,
                         columns = 1, lines = F, rectangles = T, 
-                        corner = c(0, 1)),
+                        space = "top"),#corner = c(0, 1)),
           par.settings = simpleTheme(col = c("red", "#08306B"), 
                                      border = "transparent"),
           panel = function(x,y, ...){
@@ -215,7 +215,7 @@ barchart(enrichment$res.sum,
          horizontal = F ,
          scales = list(tck = c(1,0), cex = 2),
          auto.key=list(text=c("cross-domain", "within-domain"), 
-                       cex = 2.25, corner = c(0,1),
+                       cex = 2.25, space = "top", #corner = c(0,1),
                        columns = 1, lines = F, rectangles = T),
          par.settings = simpleTheme(col = c("red", "#08306B"), 
                                     border = "transparent"),
@@ -238,6 +238,67 @@ barchart(t(enrich_norm),
                                     fill = c("red", "#08306B"),
                                     border = "transparent"),
          ylab = list(label = "% Loops", cex = 3),
-         xlab = list(label = "Loop class", cex = 3))
+         xlab = list(label = "Loop class", cex = 3), just = "top")
 
+
+genome_info_url <- "http://hgdownload.cse.ucsc.edu/goldenPath/mm8/database/chromInfo.txt.gz"
+gi <- readLines(gzcon(url(genome_info_url, "rb")))
+giSplit <- function(x){
+  tmp <- unlist(strsplit(x, "\t"))
+  data.frame(cbind(tmp[1], as.integer(tmp[2])), stringsAsFactors = F)
+}
+genome_info_df <- ldply(gi, giSplit)
+
+grShuffle <- function(gr = NULL, genome_info = NULL, n_sets = 1, method = "chromosome"){
+  require(plyr)
+  # remove chromosomes which are not in gr
+  chroms <- genome_info[genome_info$X1 %in% levels(seqnames(gr)),]
+  chroms[,2] <- as.numeric(chroms[,2])
+  # chromosome ends in genomic length cooridinates
+  chromosome_ends <- laply(1:nrow(chroms), function(idx){
+    sum(as.numeric(chroms[1:idx,2]))})
+  # adding chromosome ends column to genome info
+  chroms <- cbind(chroms, chromosome_ends)
+  
+  gr_out <- GRanges()
+  if(method == "chromosome"){
+    grl <- split(gr,seqnames(gr))
+    permuts <- llply(1:nrow(chroms), function(idx){
+      n <- length(grl[[chroms[idx,1]]])
+      chromosome <- chroms[idx,1]
+      new_start <- runif(n, 1, as.integer(chroms[idx,2]))
+      in_width <- width(grl[[chroms[idx,1]]])
+      gr_out <- c(gr_out,GRanges(Rle(rep(chromosome, n)),
+              IRanges(start = new_start, 
+                      end = new_start + in_width)))
+      gr_out
+    })
+  }else if(method == "genome"){
+    genome_length <- as.numeric(sum(chroms[,2]))
+    # width of input genomic regions
+    in_width <- width(gr)
+    # new start positions in genomic coordinates
+    new_starts <- runif(length(gr), 1, genome_length)
+    # mapping genomic coordinates to chromosomal coordinates
+    # and return GRanges object
+    for(idx in 1:nrow(chroms)){
+      chromosome <- chroms[idx,1]
+      if(idx == 1){
+        starts <- which(new_starts > 0 & new_starts <= chroms[idx,3])
+      }else{
+        starts <- which(new_starts > chroms[idx-1,3] & new_starts <= chroms[idx,3])
+      }
+      start_pos <- chroms[idx,3] - new_starts[starts]
+      end_pos <- chroms[idx,3] - new_starts[starts] + in_width[starts]
+      tmp_gr <- GRanges(Rle(rep(chroms[idx,1], length(starts))),
+                       IRanges(start_pos, end_pos))
+      gr_out <- c(gr_out, tmp_gr)
+      }
+    gr_out
+  }
+}
+
+library(doMC)
+registerDoMC(2)
+rand_topod <- llply(1:1000,function(x) grShuffle(topod_mm8, genome_info = genome_info_df, method = "genome"),.parallel = T)
 
