@@ -67,3 +67,10 @@ grShuffle <- function(gr_in = NULL, genome_info = NULL, n_sets = 1, method = "ch
     gr_out
   }
 }
+
+# non parametric p vslues
+nonParP <- function(observed, expected){
+  p.out <- sum(abs(expected) > observed)
+  p.at <- sum(abs(expected) == observed)
+  (p.out + p.at /2) / (length(expected) +1)
+}
