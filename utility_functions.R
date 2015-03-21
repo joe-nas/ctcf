@@ -74,3 +74,12 @@ nonParP <- function(observed, expected){
   p.at <- sum(abs(expected) == observed)
   (p.out + p.at /2) / (length(expected) +1)
 }
+
+# outlier
+outlier <- function(x, ...){
+  idx <- which(x %in% boxplot.stats(x, ...)$out)
+  idx
+}
+
+
+
