@@ -37,13 +37,13 @@ loops_chip_intersection <- llply(GRangesList(ChIP_seq),
 # merge per loop intersections count into a data.frame
 lci_tab <- Reduce(cbind,Map(loops_chip_intersection, 
                             f = function(x){
-                              as.data.frame(as.numeric(unlist(x))))
-                  })
+                              as.data.frame(as.numeric(unlist(x)))
+                  }))
 colnames(lci_tab) <- names(loops_chip_intersection)
 
 # add factor variable histone cluster class: y
 df <- ldply(loops_split, length)
-y <- Reduce(c,Map(f = function(x) rep(df[x,1],df[x,2]) , 1:nrow(df)))
+y <- Reduce(c,Map(f = function(x) rep(df[x,1],df[x,2]), 1:nrow(df)))
 lci_tab$y <- as.factor(y)
 
 # perform anova and compute "Compute Tukey Honest Significant Differences"
