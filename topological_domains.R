@@ -1,6 +1,7 @@
 ### topological domains
 library(rtracklayer)
 library(gdata)
+library(curl)
 # load topological domain data
 topological_domains <- "http://www.nature.com/nature/journal/v485/n7398/extref/nature11082-s2.xls"
 
@@ -90,7 +91,8 @@ obs_loops_gr <- with(ht_anchors_df[ht_anchors_df$loopID %in% loop_props$loopID,]
                              IRanges(start = start.x,
                                      end = end.y),
                              head_height = height.x,
-                             tail_height = height.y))
+                             tail_height = height.y,
+                             hcc = hcc.x))
 
 # generate function to generate random loops
 ctcf_split <- split(ctcf_bs_gr, ctcf_bs_gr$interaction)
@@ -155,18 +157,95 @@ load(curl(url = simulated_loops_url, open = "r"))
 # count overlaps of simulated loops as well as observed loops with topological domain barriers
 expected <- countOverlaps(GRangesList(simulated_loops), topod_mm8)
 observed <- countOverlaps(GRangesList(obs_loops_gr), topod_mm8)
+
 ## visualizing observed and expected loop-topological domain overlap
 library(lattice)
+lattice.options(axis.padding=list(factor=0.5))
+
 histogram(expected, xlim = range(c(expected+20,observed-20)), 
-          breaks = 30, scales = list(tck = c(1,0), cex = 1.5), 
-          auto.key=list(text=c("Observed", "Expected"), cex = 2,
-                        columns = 2, lines = F, rectangles = T),
+          breaks = 30, scales = list(tck = c(1,0), cex = 2), 
+          auto.key=list(text=c("Observed", "Expected"), cex = 2.25,
+                        columns = 1, lines = F, rectangles = T, 
+                        space = "top"),#corner = c(0, 1)),
           par.settings = simpleTheme(col = c("red", "#08306B"), 
                                      border = "transparent"),
           panel = function(x,y, ...){
             panel.histogram(x, ..., col = "#08306B")
-            panel.abline(v = observed, col = "red" , lwd = 4)
+            panel.abline(v = observed, col = "red" , lwd = 5)
           }, 
-          xlab = list(label = "Topological domain overlaps", cex = 2),
-          ylab = list(cex = 2))
+          xlab = list(label = "Topological domain overlaps", cex = 3),
+          ylab = list(cex = 3))
+
+
+## are particular loop types more likely to cross topological domain borders than others
+
+topoEnrich <- function(loops, topod, red = FALSE, alt = "greater"){
+  require(plyr)
+  if(red == TRUE){
+    obs_loops_by_hcc <- reduce(split(loops, loops$hcc))
+  }else{
+    obs_loops_by_hcc <- split(loops, loops$hcc)
+  }
+  
+  observed_by_hcc <- countOverlaps(obs_loops_by_hcc, topod)
+  
+  n_tot_loops <- length(unlist(obs_loops_by_hcc))
+  n_tot_ov <- sum(observed_by_hcc)
+  
+  split_n_loops <- laply(obs_loops_by_hcc, length)
+  
+  
+  background <- cbind(n_tot_ov, n_tot_loops - n_tot_ov)
+  foreground <- t(rbind(observed_by_hcc, split_n_loops - observed_by_hcc))
+  
+  p.val <- laply(1:nrow(foreground), function(idx){
+    fisher.test(rbind(foreground[idx,],background), 
+                alternative = alt)$p.value
+  })
+  list("p.val" = p.val,
+       "res.sum" = foreground)
+}
+enrichment <- topoEnrich(obs_loops_gr, topod_mm8, red = FALSE, alt = "greater")
+depletion <- topoEnrich(obs_loops_gr, topod_mm8, red = FALSE, alt = "less")
+
+# barchart showing the ctcf mediated loops class distribution 
+# in the context of topological domain barriers
+barchart(enrichment$res.sum,
+         stack = T, 
+         horizontal = F ,
+         scales = list(tck = c(1,0), cex = 2),
+         auto.key=list(text=c("cross-domain", "within-domain"), 
+                       cex = 2.25, space = "top", #corner = c(0,1),
+                       columns = 1, lines = F, rectangles = T),
+         par.settings = simpleTheme(col = c("red", "#08306B"), 
+                                    border = "transparent"),
+         ylab = list(label = "# Loops", cex = 3),
+         xlab = list(label = "Loop class", cex = 3))
+
+
+# normalized barchart
+enrich_norm <- 100*enrichment$res.sum[,1]/colSums(t(enrichment$res.sum))
+enrich_norm <- rbind(enrich_norm, 100- enrich_norm)
+
+barchart(t(enrich_norm),
+         stack = T, outer = F,
+         horizontal = F ,
+         scales = list(tck = c(1,0), cex = 2),
+         auto.key=list(text=c("cross-domain", "within-domain"), 
+                       cex = 2.25, space = "top",
+                       columns = 1, lines = F, rectangles = T),
+         par.settings = simpleTheme(col = c("red", "#08306B"),
+                                    fill = c("red", "#08306B"),
+                                    border = "transparent"),
+         ylab = list(label = "% Loops", cex = 3),
+         xlab = list(label = "Loop class", cex = 3), just = "top")
+
+
+library(devtools)
+source_url("https://github.com/joe-nas/ctcf/raw/master/utility_functions.R")
+grShuffle(topod_mm8, genome_info = getGenomeTable(), method = "genome")
+
+library(doMC)
+registerDoMC(2)
+rand_topod <- llply(1:1000,function(x) grShuffle(topod_mm8, genome_info = genome_info_df, method = "genome"),.parallel = T)
 
