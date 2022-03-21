@@ -14,6 +14,11 @@ mainly a function like bedtools shuffle but for GRanges objects.
 
 ### R data:
 
-- ctcf_bs_motif_orientation.R
-- simulated_loops.Rdata
-- simulated_loops_motif_matched.Rdata
+#### ctcf_bs_motif_orientation.R
+contains object containing the ctcf chip-seq bs but with motif and motif orentation.
+
+#### simulated_loops.Rdata
+object containing simulated loops.
+
+#### simulated_loops_motif_matched.Rdata
+object containing simulated ctcf loops but under constraints like loop length, motif and motif direcrtionality.
