@@ -7,9 +7,9 @@
 contains the data analysis workflow used in the report. E.g creation of naively created loops and loops under constraints like motive directionality and length. Furthermore, a workflow to check if particular ctcf loop types cross topological domain borders.
 
 #### within_loop_analysis.R
+workflow to check for enrichment of particular tfs within ctcf mediated loops. ANOVA and Tukeyhsk
 
-
-- utility_functions.R
+#### utility_functions.R
 
 ### R data:
 
