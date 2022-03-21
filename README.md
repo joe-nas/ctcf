@@ -10,6 +10,7 @@ contains the data analysis workflow used in the report. E.g creation of naively 
 workflow to check for enrichment of particular tfs within ctcf mediated loops. ANOVA and Tukeyhsk
 
 #### utility_functions.R
+mainly a function like bedtools shuffle but for GRanges objects.
 
 ### R data:
 
