@@ -3,8 +3,12 @@
 
 ### R scripts:
 
-- topological_domains.R
-- within_loop_analysis.R
+#### topological_domains.R
+contains the data analysis workflow used in the report. E.g creation of naively created loops and loops under constraints like motive directionality and length. Furthermore, a workflow to check if particular ctcf loop types cross topological domain borders.
+
+#### within_loop_analysis.R
+
+
 - utility_functions.R
 
 ### R data:
