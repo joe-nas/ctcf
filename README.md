@@ -1,5 +1,5 @@
 # CTCF-motif directionality controls CTCF-mediated chromatin interactions and correlates with topological domain structure
-## R scripts and data files containing the analysis worklof and results
+## R scripts and data files containing analysis worklofs and results
 
 ### R scripts:
 
